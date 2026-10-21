@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Artemis: South Pole Rover</title>
+<style>
+:root{--bg:#050811;--panel:#1e293b;--line:#334155;--text:#f1f5f9;--muted:#94a3b8;--ice:#38bdf8;--ok:#4ade80;--warn:#facc15;--bad:#f87171;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#050811;--panel:#1e293b;--text:#f1f5f9}}
+:root[data-theme="dark"]{--bg:#050811;--panel:#1e293b;--text:#f1f5f9}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;text-align:center;padding:14px}
+h1{font-size:20px;color:#60a5fa;margin:0 0 4px}
+p.hint{color:var(--muted);font-size:13px;margin:0 0 10px}
+.hud{display:inline-flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:8px 18px;font-weight:bold;font-size:14px;margin-bottom:8px}
+.bar{width:130px;height:12px;background:#0f172a;border:1px solid var(--line);border-radius:6px;overflow:hidden;display:inline-block;vertical-align:middle}
+#fill{height:100%;width:100%;background:var(--ok);transition:background .2s}
+canvas{display:block;margin:6px auto;max-width:100%;height:auto;background:#0f172a;border:2px solid #3b82f6;box-shadow:0 0 20px rgba(59,130,246,.4);outline:none;touch-action:none}
+.pad{display:none;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px);gap:8px;justify-content:center;margin-top:10px}
+.pad button{font-size:24px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);touch-action:none;user-select:none}
+.pad .u{grid-column:2;grid-row:1}.pad .l{grid-column:1;grid-row:2}.pad .d{grid-column:2;grid-row:2}.pad .r{grid-column:3;grid-row:2}
+#base{display:none;max-width:800px;margin:10px auto}
+#base.on{display:block}
+.bank{font-size:16px;margin-bottom:10px;color:var(--ice)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px;text-align:left;font-size:13px}
+.card span{color:var(--warn)}.card small{color:var(--muted);flex:1}
+#base button{font:inherit;font-weight:bold;border-radius:10px;border:1px solid #3b82f6;background:#1d4ed8;color:#fff;padding:8px 14px;cursor:pointer}
+#base button:disabled{background:var(--panel);border-color:var(--line);color:var(--muted);cursor:default}
+#base #go{padding:12px 22px;font-size:15px}
+@media (hover:none){.pad{display:grid}}
+</style>
+</head>
+<body>
+<h1>Artemis: South Pole Rover</h1>
+<p class="hint">Arrow keys or WASD. Collect ice in the crater shadow, dodge rocks and recharge at the sunlit base below. All collected ice goes to your bank and is spent on upgrading the moon base between sectors.</p>
+<div class="hud">
+  <span>Sector: <span id="lvl" style="color:var(--warn)">1</span>/3</span>
+  <span>Ice bank: <span id="bank" style="color:var(--ice)">0</span></span>
+  <span>Ice: <span id="score" style="color:var(--ice)">0</span>/5</span>
+  <span>Battery: <span class="bar"><div id="fill"></div></span> <span id="pct">100%</span></span>
+</div>
+<canvas id="c" width="800" height="500" tabindex="1"></canvas>
+<div id="base"></div>
+<div class="pad">
+  <button class="u" data-k="ArrowUp">▲</button><button class="l" data-k="ArrowLeft">◀</button><button class="d" data-k="ArrowDown">▼</button><button class="r" data-k="ArrowRight">▶</button>
+</div>
+
+<script>
+const cv=document.getElementById("c"),ctx=cv.getContext("2d");
+const W=cv.width,H=cv.height;
+const dark=document.createElement("canvas");dark.width=W;dark.height=H;const dctx=dark.getContext("2d");
+const BASE={x:400,y:470,r:48};
+const CR={x:400,y:215,r:215};
+let keys={},rover,battery,lvl=1,ice=[],rocks=[],parts=[],state="start",shake=0,t=0,total=0,bank=0,act="new";
+let up={solar:0,batt:0,light:0,engine:0,extr:0};
+try{const s=JSON.parse(localStorage.getItem("lunarBase")||"null");if(s){bank=s.bank|0;up=Object.assign(up,s.up)}}catch(e){}
+function save(){try{localStorage.setItem("lunarBase",JSON.stringify({bank,up}))}catch(e){}}
+const COST=[4,8,14];
+const UPS=[["solar","Solar panels","Faster charging at the base"],["batt","Energy efficiency","Lower battery drain"],["light","Headlights","Wider light in the shadow"],["engine","Engine","Higher rover speed"],["extr","Ice extractor","More ice from every deposit"]];
+const stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*1.5+.3}));
+
+function setup(){
+  rover={x:BASE.x,y:BASE.y-40,a:0,v:0};
+  battery=100;ice=[];rocks=[];parts=[];shake=0;
+  const nIce=3+lvl*2,nRock=4+lvl*3;
+  for(let i=0,g=0;i<nRock&&g<500;g++){
+    const r=14+Math.random()*12,x=50+Math.random()*700,y=50+Math.random()*350;
+    if(Math.hypot(x-BASE.x,y-BASE.y)<BASE.r+r+50)continue;
+    if(rocks.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+r+30))continue;
+    rocks.push({x,y,r,s:Math.random()*6});i++;
+  }
+  for(let i=0,g=0;i<nIce&&g<800;g++){
+    const a=Math.random()*Math.PI*2,d=Math.sqrt(Math.random())*(CR.r-45);
+    const x=CR.x+Math.cos(a)*d,y=CR.y+Math.sin(a)*d;
+    if(y>400||rocks.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+25))continue;
+    if(ice.some(o=>Math.hypot(o.x-x,o.y-y)<60))continue;
+    ice.push({x,y,got:false,p:Math.random()*6});i++;
+  }
+  document.getElementById("lvl").textContent=lvl;
+  document.getElementById("score").textContent=0;
+  document.getElementById("score").nextSibling;
+  hudTotal();
+}
+function hudTotal(){
+  const got=ice.filter(i=>i.got).length;
+  document.getElementById("bank").textContent=bank;
+  document.getElementById("score").textContent=got;
+  document.getElementById("score").parentNode.lastChild.textContent="/"+ice.length;
+}
+const down=(...c)=>c.some(k=>keys[k]);
+
+function update(){
+  t++;
+  if(shake>0)shake--;
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
+  parts=parts.filter(p=>p.life>0);
+  if(state!=="play")return;
+  const turn=(down("ArrowRight","KeyD")?1:0)-(down("ArrowLeft","KeyA")?1:0);
+  const acc=(down("ArrowUp","KeyW")?1:0)-(down("ArrowDown","KeyS")?.6:0);
+  if(battery>0){rover.a+=turn*0.055;rover.v+=acc*0.14}
+  rover.v*=0.965;
+  rover.v=Math.max(-1.8,Math.min(3.8+0.45*up.engine,rover.v));
+  rover.x+=Math.sin(rover.a)*rover.v;
+  rover.y-=Math.cos(rover.a)*rover.v;
+  rover.x=Math.max(22,Math.min(W-22,rover.x));
+  rover.y=Math.max(22,Math.min(H-22,rover.y));
+  // battery
+  const onBase=Math.hypot(rover.x-BASE.x,rover.y-BASE.y)<BASE.r;
+  if(onBase)battery=Math.min(100,battery+0.45+0.3*up.solar);
+  else battery-=(0.006+0.028*Math.abs(rover.v)/3.8)*(1-0.15*up.batt);
+  if(battery<=0){battery=0;if(Math.abs(rover.v)<0.05){state="lost"}}
+  // dust
+  if(Math.abs(rover.v)>0.6&&t%2===0)parts.push({x:rover.x-Math.sin(rover.a)*14+(Math.random()-.5)*8,y:rover.y+Math.cos(rover.a)*14+(Math.random()-.5)*8,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,life:30});
+  // rocks
+  rocks.forEach(o=>{
+    const d=Math.hypot(rover.x-o.x,rover.y-o.y),m=o.r+14;
+    if(d<m){
+      const nx=(rover.x-o.x)/d,ny=(rover.y-o.y)/d;
+      rover.x=o.x+nx*m;rover.y=o.y+ny*m;
+      if(Math.abs(rover.v)>1){battery-=3;shake=10;for(let i=0;i<8;i++)parts.push({x:rover.x,y:rover.y,vx:(Math.random()-.5)*3,vy:(Math.random()-.5)*3,life:25})}
+      rover.v*=-0.35;
+    }
+  });
+  // ice
+  ice.forEach(i=>{
+    if(!i.got&&Math.hypot(rover.x-i.x,rover.y-i.y)<28){
+      i.got=true;total++;bank+=1+up.extr;save();battery=Math.min(100,battery+8);
+      for(let k=0;k<14;k++)parts.push({x:i.x,y:i.y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:35,ice:true});
+      hudTotal();
+    }
+  });
+  if(ice.every(i=>i.got)){state=lvl<3?"next":"won"}
+  const pct=Math.round(battery);
+  const f=document.getElementById("fill");
+  f.style.width=pct+"%";
+  f.style.background=pct<25?"var(--bad)":pct<50?"var(--warn)":"var(--ok)";
+  document.getElementById("pct").textContent=pct+"%";
+}
+
+function drawRock(o){
+  ctx.fillStyle="#1e293b";ctx.beginPath();
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,r=o.r*(0.85+0.15*Math.sin(o.s+i*2.1));ctx.lineTo(o.x+Math.cos(a)*r,o.y+Math.sin(a)*r)}
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle="#475569";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle="rgba(148,163,184,.25)";ctx.beginPath();ctx.arc(o.x-o.r*.3,o.y-o.r*.3,o.r*.35,0,7);ctx.fill();
+}
+
+function draw(){
+  if(state==="base"){drawBase();return}
+  ctx.save();
+  if(shake>0)ctx.translate((Math.random()-.5)*5,(Math.random()-.5)*5);
+  ctx.fillStyle="#090d16";ctx.fillRect(0,0,W,H);
+  stars.forEach(s=>{ctx.fillStyle="rgba(226,232,240,"+(0.3+0.3*Math.sin(t*.03+s.x))+")";ctx.fillRect(s.x,s.y,s.s,s.s)});
+  // crater
+  const g=ctx.createRadialGradient(CR.x,CR.y,40,CR.x,CR.y,CR.r);
+  g.addColorStop(0,"#02040a");g.addColorStop(.85,"#050914");g.addColorStop(1,"#1e293b");
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(CR.x,CR.y,CR.r,0,7);ctx.fill();
+  ctx.strokeStyle="#334155";ctx.lineWidth=3;ctx.stroke();
+  // base (sunlit)
+  const bg=ctx.createRadialGradient(BASE.x,BASE.y,5,BASE.x,BASE.y,BASE.r+25);
+  bg.addColorStop(0,"rgba(250,204,21,.55)");bg.addColorStop(1,"rgba(250,204,21,0)");
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(BASE.x,BASE.y,BASE.r+25,0,7);ctx.fill();
+  ctx.strokeStyle="#facc15";ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.beginPath();ctx.arc(BASE.x,BASE.y,BASE.r,0,7);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#facc15";ctx.font="11px 'Courier New',monospace";ctx.textAlign="center";ctx.fillText("SOLAR BASE",BASE.x,BASE.y+4);
+  ctx.fillStyle="#64748b";ctx.fillText("Permanently Shadowed Region (PSR)",CR.x,24);
+  rocks.forEach(drawRock);
+  // ice
+  ice.forEach(i=>{
+    if(i.got)return;
+    const d=Math.hypot(rover.x-i.x,rover.y-i.y),vis=Math.max(0.12,1-d/230);
+    const pul=1+0.15*Math.sin(t*.08+i.p);
+    ctx.globalAlpha=vis;
+    ctx.fillStyle="rgba(56,189,248,.3)";ctx.beginPath();ctx.arc(i.x,i.y,18*pul,0,7);ctx.fill();
+    ctx.fillStyle="#38bdf8";ctx.beginPath();
+    for(let k=0;k<6;k++){const a=k/6*Math.PI*2+i.p,r=k%2?7:13;ctx.lineTo(i.x+Math.cos(a)*r,i.y+Math.sin(a)*r)}
+    ctx.closePath();ctx.fill();ctx.strokeStyle="#e0f2fe";ctx.lineWidth=1.5;ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+  // dust
+  parts.forEach(p=>{ctx.fillStyle=p.ice?"rgba(125,211,252,"+p.life/35+")":"rgba(148,163,184,"+p.life/45+")";ctx.beginPath();ctx.arc(p.x,p.y,p.ice?3:2.5,0,7);ctx.fill()});
+  // darkness mask with headlight
+  dctx.globalCompositeOperation="source-over";
+  dctx.clearRect(0,0,W,H);
+  dctx.fillStyle="rgba(2,4,10,.82)";dctx.fillRect(0,0,W,H);
+  dctx.globalCompositeOperation="destination-out";
+  const L=1+0.2*up.light;let rg=dctx.createRadialGradient(rover.x,rover.y,0,rover.x,rover.y,85*L);
+  rg.addColorStop(0,"rgba(0,0,0,1)");rg.addColorStop(1,"rgba(0,0,0,0)");
+  dctx.fillStyle=rg;dctx.beginPath();dctx.arc(rover.x,rover.y,85*L,0,7);dctx.fill();
+  dctx.save();dctx.translate(rover.x,rover.y);dctx.rotate(rover.a);
+  rg=dctx.createRadialGradient(0,0,0,0,0,260*L);
+  rg.addColorStop(0,"rgba(0,0,0,1)");rg.addColorStop(1,"rgba(0,0,0,0)");
+  dctx.fillStyle=rg;dctx.beginPath();dctx.moveTo(0,-10);dctx.lineTo(-120*L,-260*L);dctx.lineTo(120*L,-260*L);dctx.closePath();dctx.fill();
+  dctx.restore();
+  rg=dctx.createRadialGradient(BASE.x,BASE.y,10,BASE.x,BASE.y,BASE.r+40);
+  rg.addColorStop(0,"rgba(0,0,0,1)");rg.addColorStop(1,"rgba(0,0,0,0)");
+  dctx.fillStyle=rg;dctx.beginPath();dctx.arc(BASE.x,BASE.y,BASE.r+40,0,7);dctx.fill();
+  ctx.drawImage(dark,0,0);
+  // rover
+  ctx.save();ctx.translate(rover.x,rover.y);ctx.rotate(rover.a);
+  ctx.fillStyle="#64748b";
+  [[-18,-18],[13,-18],[-18,6],[13,6]].forEach(w=>ctx.fillRect(w[0],w[1],5,12));
+  ctx.fillStyle="#e2e8f0";ctx.fillRect(-14,-20,28,40);
+  ctx.fillStyle="#2563eb";ctx.fillRect(-10,-10,20,18);
+  ctx.fillStyle=battery>0?"#fef08a":"#475569";ctx.fillRect(-10,-21,6,3);ctx.fillRect(4,-21,6,3);
+  ctx.restore();
+  // compass to nearest ice
+  const left=ice.filter(i=>!i.got);
+  if(state==="play"&&left.length){
+    let n=left[0],nd=1e9;left.forEach(i=>{const d=Math.hypot(i.x-rover.x,i.y-rover.y);if(d<nd){nd=d;n=i}});
+    if(nd>90){
+      const a=Math.atan2(n.y-rover.y,n.x-rover.x);
+      ctx.save();ctx.translate(rover.x+Math.cos(a)*44,rover.y+Math.sin(a)*44);ctx.rotate(a);
+      ctx.fillStyle="rgba(56,189,248,.85)";ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+  // screens
+  const msg={
+    start:["ARTEMIS: SOUTH POLE","Find water ice in the eternal shadow. Your battery drains; the base restores it.","Press Space or click to open the moon base"],
+    next:["SECTOR "+lvl+" CLEARED","Ice collected. The next crater is deeper, with more rocks.","Press Space to visit the moon base and upgrade"],
+    lost:["ROVER OUT OF POWER","The battery died far from base. Recharge in time.","Press Space to visit the moon base"],
+    won:["MISSION COMPLETE","Ice collected: "+total+". Artemis Base has enough water.","Press Space for the moon base, then a new mission"]
+  }[state];
+  if(msg){
+    ctx.fillStyle="rgba(15,23,42,.88)";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";
+    ctx.fillStyle=state==="lost"?"#f87171":state==="start"?"#60a5fa":"#4ade80";
+    ctx.font="bold 26px 'Courier New',monospace";ctx.fillText(msg[0],W/2,215);
+    ctx.fillStyle="#f8fafc";ctx.font="14px 'Courier New',monospace";ctx.fillText(msg[1],W/2,255);
+    ctx.fillStyle="#94a3b8";ctx.fillText(msg[2],W/2,295);
+  }
+  ctx.textAlign="start";
+}
+
+function drawBase(){
+  const GY=360;
+  ctx.fillStyle="#050811";ctx.fillRect(0,0,W,H);
+  stars.forEach(s=>{ctx.fillStyle="rgba(226,232,240,.6)";ctx.fillRect(s.x,s.y*0.6,s.s,s.s)});
+  ctx.fillStyle="#2563eb";ctx.beginPath();ctx.arc(660,90,26,0,7);ctx.fill();
+  ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(652,86,9,0,7);ctx.fill();
+  const gr=ctx.createLinearGradient(0,GY,0,H);gr.addColorStop(0,"#334155");gr.addColorStop(1,"#0f172a");
+  ctx.fillStyle=gr;ctx.fillRect(0,GY,W,H-GY);
+  for(let i=0;i<up.light;i++){const x=60+i*34;ctx.fillStyle="#64748b";ctx.fillRect(x-2,GY-70,4,70);ctx.fillStyle="rgba(254,240,138,.25)";ctx.beginPath();ctx.moveTo(x,GY-70);ctx.lineTo(x-30,GY);ctx.lineTo(x+30,GY);ctx.fill();ctx.fillStyle="#fef08a";ctx.beginPath();ctx.arc(x,GY-72,5,0,7);ctx.fill()}
+  for(let i=0;i<up.solar;i++){const x=150+i*52;ctx.fillStyle="#64748b";ctx.fillRect(x+20,GY-26,4,26);ctx.save();ctx.translate(x+22,GY-26);ctx.rotate(-.35);ctx.fillStyle="#1d4ed8";ctx.fillRect(-24,-8,48,12);ctx.strokeStyle="#93c5fd";ctx.strokeRect(-24,-8,48,12);ctx.restore()}
+  for(let i=0;i<up.batt;i++){const x=490+i*30;ctx.fillStyle="#16a34a";ctx.fillRect(x,GY-34,22,34);ctx.fillStyle="#bbf7d0";ctx.fillRect(x+7,GY-38,8,4)}
+  for(let i=0;i<up.extr;i++){const x=620+i*50;ctx.strokeStyle="#94a3b8";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-14,GY);ctx.lineTo(x,GY-64);ctx.lineTo(x+14,GY);ctx.moveTo(x-8,GY-30);ctx.lineTo(x+8,GY-30);ctx.stroke();ctx.fillStyle="#38bdf8";ctx.fillRect(x-4,GY-70,8,8)}
+  const lv=Object.values(up).reduce((a,b)=>a+b,0),R=48+lv*1.5;
+  const dg=ctx.createRadialGradient(400,GY-R*.5,5,400,GY,R);dg.addColorStop(0,"#e2e8f0");dg.addColorStop(1,"#64748b");
+  ctx.fillStyle=dg;ctx.beginPath();ctx.arc(400,GY,R,Math.PI,0);ctx.fill();
+  ctx.fillStyle="#0f172a";ctx.fillRect(390,GY-24,20,24);
+  ctx.fillStyle=lv>0?"#fef08a":"#475569";const nw=3+lv;for(let i=0;i<nw;i++)ctx.fillRect(400-R+14+i*(2*R-34)/nw,GY-R*.6,6,6);
+  const rx=400,ry=GY+40;ctx.fillStyle="#e2e8f0";ctx.fillRect(rx-16,ry-8,32,14);ctx.fillStyle="#2563eb";ctx.fillRect(rx-8,ry-14,16,6);ctx.fillStyle="#64748b";[-12,10].forEach(o=>ctx.fillRect(rx+o,ry+4,6,6));
+  for(let i=0;i<up.engine;i++){ctx.fillStyle="#facc15";ctx.fillRect(rx-24-i*7,ry-3,5,5)}
+  ctx.textAlign="center";ctx.fillStyle="#60a5fa";ctx.font="bold 22px 'Courier New',monospace";ctx.fillText("Artemis Moon Base",W/2,40);
+  ctx.fillStyle="#94a3b8";ctx.font="13px 'Courier New',monospace";ctx.fillText("Base level: "+lv+" of 15",W/2,62);ctx.textAlign="start";
+}
+function renderBase(){
+  const el=document.getElementById("base");
+  const btn={new:"Start mission",next:"Drive to next sector",retry:"Retry sector"}[act];
+  el.innerHTML='<div class="bank">Ice bank: <b>'+bank+'</b></div><div class="cards">'+UPS.map(u=>{const L=up[u[0]],max=L>=3,c=COST[L];return '<div class="card"><b>'+u[1]+'</b><span>Level '+L+' of 3</span><small>'+u[2]+'</small><button data-u="'+u[0]+'"'+(max||bank<c?' disabled':'')+'>'+(max?'Maxed out':'Upgrade for '+c+' ice')+'</button></div>'}).join("")+'</div><button id="go">'+btn+'</button>';
+  el.classList.add("on");hudTotal();
+}
+function openBase(a){act=a;state="base";renderBase()}
+function launch(){
+  if(act==="next")lvl++;
+  if(act==="new"){lvl=1;total=0}
+  state="play";document.getElementById("base").classList.remove("on");setup();cv.focus();
+}
+function advance(){
+  if(state==="start")openBase("new");
+  else if(state==="next")openBase("next");
+  else if(state==="lost")openBase("retry");
+  else if(state==="won")openBase("new");
+}
+
+window.addEventListener("keydown",e=>{
+  if(state!=="base"&&["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code))e.preventDefault();
+  if(state!=="base"&&(e.code==="Space"||e.code==="Enter")&&!e.repeat)advance();
+  if(e.code==="KeyR"&&state==="play")setup();
+  keys[e.code]=true;
+});
+window.addEventListener("keyup",e=>{keys[e.code]=false});
+window.addEventListener("blur",()=>{keys={}});
+cv.addEventListener("click",()=>{cv.focus();if(state!=="base")advance()});
+document.querySelectorAll(".pad button").forEach(b=>{
+  const k=b.dataset.k;
+  b.addEventListener("pointerdown",e=>{e.preventDefault();keys[k]=true});
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>{keys[k]=false}));
+});
+
+setup();
+document.getElementById("base").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b||b.disabled)return;
+  if(b.id==="go"){launch();return}
+  const k=b.dataset.u,L=up[k];
+  if(L<3&&bank>=COST[L]){bank-=COST[L];up[k]++;save();renderBase()}
+});
+(function loop(){update();draw();requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>
