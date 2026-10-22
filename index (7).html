@@ -217,7 +217,7 @@ function makeBoss(){
     mesh(new THREE.ConeGeometry(.5,2.2,6),M(0xef4444,{emissive:0x7f1d1d}),Math.cos(a)*2,3.3,Math.sin(a)*2,g)}
   const shield=new THREE.Mesh(SP(7,24,16),new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false}));shield.visible=false;g.add(shield);
   g.add(ring,legs,new THREE.PointLight(0xff3322,3,70));
-  const hp=120+10*sumUp();
+  const hp=150+10*sumUp();
   return{g,ring,eye,shield,mat:core.material,x:0,z:10,hp,max:hp,ph:1,t:0,c1:2,c2:1,c3:.5,c4:5,c5:9,sh:0,stun:0,flash:0,gate:[true,true],minions:[],waves:[],laser:null};
 }
 function startBoss(){
