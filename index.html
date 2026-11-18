@@ -30,6 +30,8 @@ p.hint{color:var(--muted);font-size:13px;margin:0 auto 10px;max-width:900px}
 #admin button,#admin input{font:inherit;font-weight:bold;border-radius:10px;border:1px solid #3b82f6;background:#1d4ed8;color:#fff;padding:9px 14px;cursor:pointer}
 #admin input{background:#0f172a;border-color:var(--line);cursor:text;width:100%;margin-bottom:8px}#aerr{color:var(--bad);font-size:12px;min-height:16px;margin-bottom:6px}
 #fl{position:absolute;inset:0;background:#f00;opacity:0;pointer-events:none}
+#rwarn{position:absolute;top:44px;left:50%;transform:translateX(-50%);display:none;color:#bef264;font-weight:bold;font-size:clamp(12px,2.2vw,18px);text-shadow:0 0 8px #84cc16,0 0 3px #000;pointer-events:none;background:rgba(15,23,42,.55);border:1px solid #84cc16;border-radius:14px;padding:3px 12px;z-index:3}
+#radfx{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(132,204,22,0) 35%,rgba(132,204,22,.55) 100%),repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(163,230,53,.12) 2px 3px);mix-blend-mode:screen}
 #fade{position:absolute;inset:0;background:#000;opacity:1;pointer-events:none;display:none}
 #ihud{position:absolute;top:10px;left:12px;display:none;color:#7dd3fc;font-size:clamp(10px,1.8vw,13px);text-align:left;text-shadow:0 0 6px #000;letter-spacing:1px;line-height:1.5;pointer-events:none}
 #cap{position:absolute;left:0;right:0;bottom:7%;display:none;flex-direction:column;gap:4px;pointer-events:none;text-shadow:0 0 10px #000,0 0 3px #000;padding:0 12px}
@@ -66,11 +68,12 @@ p.hint{color:var(--muted);font-size:13px;margin:0 auto 10px;max-width:900px}
   <span>⚡ <span class="bar" style="width:60px"><div id="tb"></div></span></span>
   <span>📡 <span class="bar" style="width:60px"><div id="sb" style="height:100%;width:100%;background:var(--ice)"></div></span></span>
   <span>💥 <span class="bar" style="width:70px"><div id="ub" style="height:100%;width:0;background:#a16207"></div></span></span>
+  <span id="radw" title="Radiation dose">☢ <span class="bar" style="width:70px"><div id="rb" style="height:100%;width:0;background:#84cc16"></div></span> <span id="rp">0%</span></span>
 </div>
 <div id="stage">
   <div id="bossbar"><span id="bn"></span><div><div id="bb"></div></div></div>
   <div id="cmp"><div id="arr">▲</div></div>
-  <div id="comm"><b id="cb"></b><span id="ct"></span></div><div id="fl"></div><div id="flare"></div><div id="combo"></div><div id="toast"></div>
+  <div id="comm"><b id="cb"></b><span id="ct"></span></div><div id="fl"></div><div id="radfx"></div><div id="rwarn"><span id="rwt"></span> <span id="rwa" style="display:inline-block">▲</span></div><div id="flare"></div><div id="combo"></div><div id="toast"></div>
   <div id="emb"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="94" fill="#0b1b4a" stroke="#e2e8f0" stroke-width="4"/><circle cx="100" cy="100" r="84" fill="none" stroke="#38bdf8" stroke-width="1.5"/><circle cx="100" cy="62" r="26" fill="#f1f5f9"/><circle cx="111" cy="56" r="24" fill="#0b1b4a"/><path d="M30 148 Q100 70 170 148" fill="none" stroke="#f87171" stroke-width="5"/><circle cx="170" cy="148" r="6" fill="#f1f5f9"/><text x="100" y="128" text-anchor="middle" font-family="Courier New,monospace" font-weight="bold" font-size="22" fill="#f1f5f9" letter-spacing="3">ARTEMIS</text><text x="100" y="166" text-anchor="middle" font-family="Courier New,monospace" font-weight="bold" font-size="14" fill="#93c5fd" letter-spacing="5">NASA</text></svg></div>
   <div id="fade"></div><div id="ihud"></div><div id="cap"><b id="cap1"></b><span id="cap2"></span></div><button id="skip" data-i="skipT"></button>
   <div id="ov"><h2 id="ot"></h2><p id="od"></p><small id="oh"></small></div>
@@ -91,8 +94,8 @@ p.hint{color:var(--muted);font-size:13px;margin:0 auto 10px;max-width:900px}
 (function(){
 if(typeof THREE==="undefined"){document.getElementById("stage").textContent="three.js failed to load / не удалось загрузить three.js";return}
 const T={
-ru:{h1:"Артемида 3D: ровер на южном полюсе",hint:"WASD или стрелки: ехать. Shift: ускорение (гараж делает его дольше). Пробел: двойной выстрел по пришельцам и боссу. Q: ульта, копится со временем и от попаданий. Зелёные пришельцы гонятся за тобой: убегай или стреляй, им хватает одного выстрела. E: сканер. Собирай лёд цепочкой ради комбо, лови убегающий золотой светляк (догоняй на Shift), зелёные кристаллы заряжают, берегись метеоритов. Кратер почти в полной темноте: ориентируйся по лучу фар. Собирай лёд, заряжайся на базе и строй лунную базу. Пройди 3 сектора, и появится босс.",
-sector:"Сектор:",hq:"ЦУП ХЬЮСТОН",flareC:"Солнечная вспышка через несколько секунд! Спрячься за камнем или у посадочного модуля, иначе электроника сгорит.",stormC:"Пылевая буря: видимость упала. Ориентируйся по лучам льда и сканеру E.",finB:"🎬 Смотреть финал",finHint:"Прокачай базу до конца, чтобы увидеть финал: высадку экипажа Orion.",
+ru:{h1:"Артемида 3D: ровер на южном полюсе",hint:"WASD или стрелки: ехать. Shift: ускорение (гараж делает его дольше). Пробел: двойной выстрел по пришельцам и боссу. Q: ульта, копится со временем и от попаданий. Зелёные пришельцы гонятся за тобой: убегай или стреляй, им хватает одного выстрела. E: сканер. Собирай лёд цепочкой ради комбо, лови убегающий золотой светляк (догоняй на Shift), зелёные кристаллы заряжают и снижают дозу радиации, берегись метеоритов. Кратер почти в полной темноте: ориентируйся по лучу фар. Собирай лёд, заряжайся на базе и строй лунную базу. Радиация ☢: время от времени с края сектора катится зелёная волна излучения, стрелка сверху показывает, откуда. Спрячься в тени камня: за камнем по линии от волны безопасно, такие тени подсвечены синим. Солнечные вспышки тоже копят дозу. Чем выше доза, тем медленнее ровер, хуже управление и быстрее садится батарея, а на 100% он выходит из строя. На площадке у модуля доза спадает, гараж даёт защиту. Пройди 3 сектора, и появится босс.",
+sector:"Сектор:",hq:"ЦУП ХЬЮСТОН",flareC:"Солнечная вспышка через несколько секунд! Спрячься за камнем или у посадочного модуля, иначе поймаешь опасную дозу радиации.",stormC:"Пылевая буря: видимость упала. Ориентируйся по лучам льда и сканеру E.",finB:"🎬 Смотреть финал",finHint:"Прокачай базу до конца, чтобы увидеть финал: высадку экипажа Orion.",
 fin:[[0,"ЭКИПАЖ ORION СПУСКАЕТСЯ","Лагерь Artemis готов принять людей. Ровер подготовил площадку."],[6,"ПОСАДКА","Первые люди у южного полюса Луны."],[12,"ЛЁД СТАНЕТ ВОДОЙ И ТОПЛИВОМ","Твои пробы позволят жить здесь месяцами."],[18,"ARTEMIS: СНАЧАЛА ЛУНА, ПОТОМ МАРС","Это только начало."],[24,"МИССИЯ ВЫПОЛНЕНА","Спасибо, ровер."]],secN:["Соединительный хребет","Кратер Хауорт","Кратер Кабеус"],
 secB:["Ровер, ты на хребте у Шеклтона: здесь рассматривают места посадки Artemis. На радаре странные зелёные сигналы, держи дистанцию. Собери пробы льда.","Хауорт: вечная тень, куда Солнце не заглядывало миллиарды лет. Следи за красными кругами: падают метеориты. Фары теперь твои глаза.","Кабеус: здесь в 2009 году зонд LCROSS нашёл воду. Подтверди это пробами. Сигнал из Шеклтона усиливается, поспеши."],
 secF:["Хьюстон: пробы чистые. Каждый литр воды на Луне — это килограммы, которые не нужно везти с Земли.","Хьюстон: в тени ниже −170 °C, и лёд там хранится миллиарды лет. Из воды экипаж получит кислород и топливо."],
@@ -101,12 +104,12 @@ sT:"АРТЕМИДА: ВЫСАДКА НА ЮЖНОМ ПОЛЮСЕ",sD:"Поса�
 nT:"СЕКТОР % ПРОЙДЕН",nD:"Пробы льда отправлены на анализ. Буровые добыли ещё: %.",nH:"Пробел: в лунную базу",
 lT:"РОВЕР БЕЗ ЭНЕРГИИ",lD:"Заряд кончился вдали от базы. Заряжайся вовремя.",lH:"Пробел: в лунную базу",
 wT:"СИГНАЛ ИЗ ТЕНИ ШЕКЛТОНА",wD:"Лёд найден, но в кратере проснулся неизвестный Страж. Дострой лагерь и защити место высадки: Orion с экипажем уже на подходе.",wH:"Пробел: в лунную базу",
-blds:[["Солнечная ферма","Быстрее зарядка на базе и скорострельность"],["Ледовая буровая","Больше льда с находки и добыча после сектора"],["Радар","Лучи-маяки льда видны издалека, на 1 ур. появляется компас"],["Гараж","Скорость, крепче корпус, ускорение на Shift"],["Лаборатория","Мощнее выстрелы, двойной и тройной залп"],["Оборонительная батарея","Дроны-помощники стреляют по боссу"]],
+blds:[["Солнечная ферма","Быстрее зарядка на базе и скорострельность"],["Ледовая буровая","Больше льда с находки и добыча после сектора"],["Радар","Лучи-маяки льда видны издалека, на 1 ур. появляется компас"],["Гараж","Скорость, крепче корпус, ускорение на Shift, защита от радиации"],["Лаборатория","Мощнее выстрелы, двойной и тройной залп"],["Оборонительная батарея","Дроны-помощники стреляют по боссу"]],
 tiers:["Посадочная площадка","Artemis Base Camp","Постоянная база","Ворота к Марсу"],bL:"Уровень базы: % из 18",bNew:"Начать миссию",bNext:"В следующий сектор",bRetry:"Повторить сектор",bBoss:"⚔ Бой с боссом",lvlS:"Ур.",maxS:"Максимум",upS:"Построить за % льда",
-bossN:"СТРАЖ ШЕКЛТОНА",shT:"ЩИТ: уничтожь дронов!",stT:"ОГЛУШЁН: бей!",bossReady:"База полностью построена. Страж проснулся!",
+bossN:"СТРАЖ ШЕКЛТОНА",radC:"Радиационная волна идёт со стороны, куда указывает стрелка! Спрячься в тени камня или у посадочного модуля, пока она не пройдёт.",radH:"Доза выше 60%: ровер замедлен, управление сбоит, батарея садится быстрее. Срочно к посадочной площадке или за зелёным кристаллом!",rT:"РОВЕР ВЫВЕДЕН РАДИАЦИЕЙ",rD:"Доза излучения убила электронику. Прячься от радиационных волн и вспышек в тени камней, а на площадке у модуля доза спадает.",shT:"ЩИТ: уничтожь дронов!",stT:"ОГЛУШЁН: бей!",bossReady:"База полностью построена. Страж проснулся!",
 bwT:"СТРАЖ ПОВЕРЖЕН",bwD:"Сигнал замолк. Место высадки безопасно: Artemis Base Camp заложен, экипаж может спускаться. Награда: +50 льда.",bwH:"Пробел: в лунную базу",blT:"РОВЕР РАЗРУШЕН",blD:"Страж оказался сильнее. Вернись и попробуй снова.",blH:"Пробел: в лунную базу"},
-en:{h1:"Artemis 3D: South Pole Rover",hint:"WASD or arrows: drive. Shift: boost (the garage makes it last longer). Space: twin shots at aliens and the boss. Q: ultimate, charges over time and on hits. Green aliens chase you: run away or shoot them, one hit is enough. E: scanner. Chain pickups for combos, chase the fleeing gold wisp (boost with Shift), green crystals recharge you, watch out for meteors. The crater is almost pitch black: steer by your headlights. Collect ice, recharge at the base and build your moon base. Clear 3 sectors and a boss appears.",
-sector:"Sector:",hq:"HOUSTON MISSION CONTROL",flareC:"Solar flare in seconds! Hide behind a rock or by the lander, or your electronics will fry.",stormC:"Dust storm: visibility is down. Navigate by the ice beams and the E scanner.",finB:"🎬 Watch the finale",finHint:"Fully upgrade the base to see the finale: the Orion crew landing.",
+en:{h1:"Artemis 3D: South Pole Rover",hint:"WASD or arrows: drive. Shift: boost (the garage makes it last longer). Space: twin shots at aliens and the boss. Q: ultimate, charges over time and on hits. Green aliens chase you: run away or shoot them, one hit is enough. E: scanner. Chain pickups for combos, chase the fleeing gold wisp (boost with Shift), green crystals recharge you and lower your radiation dose, watch out for meteors. The crater is almost pitch black: steer by your headlights. Collect ice, recharge at the base and build your moon base. Radiation ☢: every so often a green radiation wave rolls in from the edge of the sector; the arrow at the top shows where from. Hide in the shadow of a rock: the spot behind a rock, in line with the wave, is safe, and those shadows glow blue. Solar flares build up your dose too. The higher it gets, the slower the rover, the worse the controls and the faster the battery drains; at 100% it fails. The dose drops at the pad by the lander, and the garage gives shielding. Clear 3 sectors and a boss appears.",
+sector:"Sector:",hq:"HOUSTON MISSION CONTROL",flareC:"Solar flare in seconds! Hide behind a rock or by the lander, or you will take a dangerous radiation dose.",stormC:"Dust storm: visibility is down. Navigate by the ice beams and the E scanner.",finB:"🎬 Watch the finale",finHint:"Fully upgrade the base to see the finale: the Orion crew landing.",
 fin:[[0,"ORION CREW DESCENDING","The Artemis camp is ready for people. The rover prepared the pad."],[6,"TOUCHDOWN","The first humans at the Moon's south pole."],[12,"ICE BECOMES WATER AND FUEL","Your samples let them live here for months."],[18,"ARTEMIS: FIRST THE MOON, THEN MARS","This is only the beginning."],[24,"MISSION COMPLETE","Thank you, rover."]],secN:["Connecting Ridge","Haworth Crater","Cabeus Crater"],
 secB:["Rover, you are on the ridge by Shackleton, a candidate Artemis landing region. Odd green signals on radar, keep your distance. Collect ice samples.","Haworth: permanent shadow, no sunlight for billions of years. Watch the red circles: meteors incoming. Your headlights are your eyes now.","Cabeus: LCROSS found water here in 2009. Confirm it with samples. The signal from Shackleton is growing, hurry."],
 secF:["Houston: samples are clean. Every liter of water on the Moon is kilograms we do not have to launch from Earth.","Houston: it is below -170 C in the shadow, and ice keeps there for billions of years. Water gives the crew oxygen and fuel."],
@@ -115,9 +118,9 @@ sT:"ARTEMIS: SOUTH POLE LANDING",sD:"The lander touched down near Shackleton cra
 nT:"SECTOR % CLEARED",nD:"Ice samples sent for analysis. Drills mined extra: %.",nH:"Press Space for the moon base",
 lT:"ROVER OUT OF POWER",lD:"The battery died far from base. Recharge in time.",lH:"Press Space for the moon base",
 wT:"SIGNAL FROM SHACKLETON",wD:"Ice found, but an unknown Guardian has awakened in the crater. Finish the camp and defend the landing site: Orion with the crew is on its way.",wH:"Press Space for the moon base",
-blds:[["Solar farm","Faster charging at base and faster firing"],["Ice drill","More ice per find and mining after each sector"],["Radar","Ice beacon beams visible from afar; a compass at level 1"],["Garage","Speed, tougher hull, Shift boost"],["Laboratory","Stronger shots, double and triple volley"],["Defense battery","Helper drones shoot the boss"]],
+blds:[["Solar farm","Faster charging at base and faster firing"],["Ice drill","More ice per find and mining after each sector"],["Radar","Ice beacon beams visible from afar; a compass at level 1"],["Garage","Speed, tougher hull, Shift boost, radiation shielding"],["Laboratory","Stronger shots, double and triple volley"],["Defense battery","Helper drones shoot the boss"]],
 tiers:["Landing pad","Artemis Base Camp","Permanent base","Gateway to Mars"],bL:"Base level: % of 18",bNew:"Start mission",bNext:"Next sector",bRetry:"Retry sector",bBoss:"⚔ Fight the boss",lvlS:"Lv.",maxS:"Maxed out",upS:"Build for % ice",
-bossN:"SHACKLETON GUARDIAN",shT:"SHIELD: destroy the drones!",stT:"STUNNED: attack!",bossReady:"The base is fully built. The Guardian has awakened!",
+bossN:"SHACKLETON GUARDIAN",radC:"A radiation wave is coming from the direction of the arrow! Hide in the shadow of a rock or by the lander until it passes.",radH:"Dose above 60%: the rover is slowed, controls glitch, the battery drains faster. Get to the pad or grab a green crystal now!",rT:"ROVER KILLED BY RADIATION",rD:"The radiation dose fried the electronics. Hide from radiation waves and flares in the shadow of rocks, and recover at the pad by the lander.",shT:"SHIELD: destroy the drones!",stT:"STUNNED: attack!",bossReady:"The base is fully built. The Guardian has awakened!",
 bwT:"GUARDIAN DEFEATED",bwD:"The signal is silent. The landing site is safe: Artemis Base Camp is founded and the crew can descend. Reward: +50 ice.",bwH:"Press Space for the moon base",blT:"ROVER DESTROYED",blD:"The Guardian was stronger. Return and try again.",blH:"Press Space for the moon base"}};
 let lang=/^ru/.test(navigator.language||"ru")?"ru":"en";
 try{lang=localStorage.getItem("lunarLang")||lang}catch(e){}
@@ -157,6 +160,9 @@ function sfx(n,a){if(!aOn())return;switch(n){
   case"lose":tn(300,.7,"sawtooth",.2,70);nz(.5,.2,300,100);break;
   case"boss":tn(60,1.6,"sawtooth",.35,32);nz(1.6,.45,200,60);break;
   case"shield":tn(300,.5,"sine",.2,900);break;
+  case"radwave":nz(1.8,.16,180,700);tn(95,1.6,"sine",.1,60);break;
+  case"radhit":tn(150,.55,"sine",.14,55);nz(.45,.1,400,120);break;
+  case"radwarn":tn(480,.35,"triangle",.07,360);break;
   case"clank":nz(.2,.45,2200,800);tn(150,.15,"square",.15,70);break}}
 let vOn=true;try{vOn=localStorage.getItem("lunarVoice")!=="0"}catch(e){}
 function pickV(){const L=lang==="ru"?"ru":"en",vs=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith(L)),sc=v=>(/natural|online|neural/i.test(v.name)?4:0)+(/pavel|yuri|dmitry|maxim|guy|david|daniel|alex|mark|george|ryan|male/i.test(v.name)&&!/female|zira|hazel|irina|svetlana|katya|milena|jenny|aria|samantha/i.test(v.name)?8:0);return vs.sort((x,y)=>sc(y)-sc(x))[0]||null}
@@ -172,6 +178,7 @@ addEventListener("keydown",()=>{if(!AC)initAudio()},true);
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("button"))sfx("click")},true);
 
 // ---- state ----
+let rad=0,radLv=0,radDeath=false,radW=0,gT=0,radI=0,rw=null,rwT=16;
 let commT=0,warned=0,evT=24,flare=0,storm=0,bd=0,ft=0,fin=null;const KEYS=["solar","drill","radar","garage","lab","turret"],COST=[4,8,13];
 let up={solar:0,drill:0,radar:0,garage:0,lab:0,turret:0},bank=0,lvl=1,total=0,state="start",act="new",clock=0,shake=0,flash=0,battery=100,hull=100,turbo=1,fc=0;
 try{const s=JSON.parse(localStorage.getItem("lunarBase")||"null");if(s){bank=s.bank|0;bd=s.bd|0;Object.assign(up,s.up)}}catch(e){}
@@ -279,7 +286,7 @@ function updP(dt){for(let i=0;i<NP;i++){if(pl[i]>0){pl[i]-=dt;pv[i*3+1]-=4*dt;fo
 
 let rocks=[],ices=[],bullets=[],shots=[],drones=[],boss=null,dyn=[],bonus=[],meteors=[],combo=0,comboT=0,scanT=0,scanCd=0,mT=8,toastT=0,aliens=[],aT=8,ult=0,ultR=false,ultFx=[];
 const bulGeo=SP(.55,8,6),bulMat=new THREE.MeshBasicMaterial({color:0xfb923c}),shotGeo=CY(.13,2.4,6),shotMat=new THREE.MeshBasicMaterial({color:0x7dd3fc});
-function clearDyn(){trs.forEach(m=>m.visible=false);flare=storm=0;$("flare").style.opacity=0;dyn.forEach(o=>world.remove(o));bullets.forEach(o=>world.remove(o.m));shots.forEach(o=>world.remove(o.m));dyn=[];rocks=[];ices=[];bonus=[];meteors=[];aliens=[];aT=8;combo=0;comboT=0;scanT=0;mT=9;bullets=[];shots=[];drones=[];if(boss){boss.minions.forEach(o=>world.remove(o.m));boss.waves.forEach(o=>world.remove(o.g));if(boss.laser)world.remove(boss.laser.m);world.remove(boss.g);boss=null}}
+function clearDyn(){trs.forEach(m=>m.visible=false);flare=storm=0;$("flare").style.opacity=0;dyn.forEach(o=>world.remove(o));bullets.forEach(o=>world.remove(o.m));shots.forEach(o=>world.remove(o.m));dyn=[];killWave();rwT=16;rad=0;radLv=0;radW=0;radDeath=false;rocks=[];ices=[];bonus=[];meteors=[];aliens=[];aT=8;combo=0;comboT=0;scanT=0;mT=9;bullets=[];shots=[];drones=[];if(boss){boss.minions.forEach(o=>world.remove(o.m));boss.waves.forEach(o=>world.remove(o.g));if(boss.laser)world.remove(boss.laser.m);world.remove(boss.g);boss=null}}
 const addDyn=o=>{world.add(o);dyn.push(o);return o};
 function setup(){
   clearDyn();Object.assign(rover,{x:PAD.x,z:PAD.z+5,h:0,v:0});battery=100;turbo=1;
@@ -290,7 +297,7 @@ function setup(){
   for(let i=0,g=0;i<nIce&&g<800;g++){const x=rnd(-50,50),z=rnd(-50,50);
     if(Math.hypot(x,z)>52||Math.hypot(x-PAD.x,z-PAD.z)<16||rocks.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+3)||ices.some(o=>Math.hypot(o.x-x,o.z-z)<14))continue;
     ices.push(mkCrystal("ice",x,z,1.15));i++}
-  spawnAliens(2+lvl*2);spawnBonus();$("lvl").textContent=lvl;hudTotal();rocks.push({x:PAD.x-3.2,z:PAD.z-3.2,r:2.3});warned=0;evT=24;if(state==="play"){const S=T[lang];comm(S.hq+" · "+S.secN[lvl-1],S.secB[lvl-1],9)}
+  spawnAliens(2+lvl*2);spawnBonus();$("lvl").textContent=lvl;hudTotal();hudRad();rocks.push({x:PAD.x-3.2,z:PAD.z-3.2,r:2.3});warned=0;evT=24;if(state==="play"){const S=T[lang];comm(S.hq+" · "+S.secN[lvl-1],S.secB[lvl-1],9)}
 }
 function makeBoss(){
   const g=new THREE.Group(),legs=new THREE.Group(),ring=new THREE.Group();
@@ -315,15 +322,15 @@ function startBoss(){
 // ---- hud ----
 function hudTotal(){$("score").textContent=ices.filter(i=>i.got).length;$("icen").textContent="/"+ices.length;$("bank").textContent=bank}
 function hud(p){p=Math.max(0,Math.min(100,p));const f=$("fill");f.style.width=p+"%";f.style.background=p<25?"var(--bad)":p<50?"var(--warn)":"var(--ok)";$("pct").textContent=Math.round(p)+"%"}
-const setBlab=()=>{$("blab").textContent=tr(state==="boss"?"hullL":"batL")};
+const setBlab=()=>{$("blab").textContent=tr(state==="boss"?"hullL":"batL");$("radw").style.display=state==="boss"?"none":""};
 
 // ---- gameplay ----
 function move(dt){
   const turn=(down("ArrowLeft","KeyA")?1:0)-(down("ArrowRight","KeyD")?1:0),acc=(down("ArrowUp","KeyW")?1:0)-(down("ArrowDown","KeyS")?.6:0);
   const can=state==="boss"||battery>0,boost=down("ShiftLeft","ShiftRight")&&turbo>.02&&acc>0&&can;
   rover.boost=boost;if(boost)emit(rover.x-Math.sin(rover.h)*2,.7,rover.z-Math.cos(rover.h)*2,2,0x7dd3fc,6,.5);turbo=boost?Math.max(0,turbo-dt/(1.4+.4*up.garage)):Math.min(1,turbo+dt/(4-.5*up.garage));$("tb").style.width=turbo*100+"%";
-  if(can){rover.h+=turn*1.9*dt*(rover.v>=0?1:-1);rover.v+=acc*26*dt*(boost?2:1)}
-  rover.v*=Math.exp(-1.1*dt);const mx=(15+2.6*up.garage)*(boost?1.7:1);rover.v=Math.max(-7,Math.min(mx,rover.v));
+  if(can){rover.h+=(turn*1.9+(radLv>.6?Math.sin(clock*9)*1.1*(radLv-.6)/.4:0))*dt*(rover.v>=0?1:-1);rover.v+=acc*26*dt*(boost?2:1)}
+  rover.v*=Math.exp(-1.1*dt);const mx=(15+2.6*up.garage)*(boost?1.7:1)*(1-.4*radLv);rover.v=Math.max(-7,Math.min(mx,rover.v));
   rover.x+=Math.sin(rover.h)*rover.v*dt;rover.z+=Math.cos(rover.h)*rover.v*dt;
   trd+=Math.abs(rover.v)*dt;if(trd>1.2){trd=0;[-1.45,1.45].forEach(s=>{const m=trs[tri++%120];m.visible=true;m.position.set(rover.x+Math.cos(rover.h)*s,.07,rover.z-Math.sin(rover.h)*s);m.rotation.set(-PI/2,rover.h,0)})}
   const d=Math.hypot(rover.x,rover.z);if(d>58){rover.x*=58/d;rover.z*=58/d}
@@ -349,11 +356,11 @@ function update(dt){
     if(ices.every(i=>i.got)){const e=up.drill*2;bank+=e;save();state=lvl<3?"next":"won";sfx("win");showOv(e)}
     if(battery<25&&!warned){warned=1;comm(T[lang].hq,T[lang].lowC,5)}playExtras(dt);hud(battery);
     let n=null,nd=1e9;ices.forEach(i=>{if(!i.got){const d=Math.hypot(i.x-rover.x,i.z-rover.z);if(d<nd){nd=d;n=i}}});
-    const show=n&&up.radar>=1;$("cmp").style.display=show?"block":"none";
+    const show=n&&up.radar>=1;$("cmp").style.display=show&&!(radLv>.25&&Math.random()<radLv*.7)?"block":"none";
     if(show){let rel=Math.atan2(n.x-rover.x,n.z-rover.z)-rover.h;$("arr").style.transform="rotate("+(-rel)+"rad)"}
   }else if(state==="boss")bossUpdate(dt);
   else{$("cmp").style.display="none";$("combo").style.display="none"}
-  animItems(dt);
+  animItems(dt);animWave(dt);if(state!=="play")$("radfx").style.opacity=0;
   padRing.material.color.setHex(Math.sin(clock*3)>0?0xfacc15:0xfde68a);padLight.intensity=2.2+.5*Math.sin(clock*3);
 }
 const glowTex=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,"rgba(255,255,255,1)");g.addColorStop(.35,"rgba(255,255,255,.35)");g.addColorStop(1,"rgba(255,255,255,0)");x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
@@ -399,8 +406,62 @@ function evUpdate(dt){
     if(flare<=0){fo.style.opacity=0;say(lang==="ru"?"Вспышка прошла":"Flare over");toast(lang==="ru"?"Вспышка прошла":"Flare over","#fde047")}}
   if(storm>0){storm-=dt;emit(rover.x+rnd(-12,12),rnd(.5,3),rover.z+rnd(-12,12),2,0x9aa4b8,3,1.5);if(storm<=0)say(lang==="ru"?"Буря стихла":"Storm over");toast(lang==="ru"?"Буря стихла":"Storm over","#93c5fd")}
 }
+
+// ---- radiation: sweeping waves with rock shadows ----
+const radRes=()=>1-.15*up.garage;
+const rwTex=(()=>{const c=document.createElement("canvas");c.width=4;c.height=64;const x=c.getContext("2d"),g=x.createLinearGradient(0,0,0,64);g.addColorStop(0,"rgba(190,242,100,0.02)");g.addColorStop(1,"rgba(190,242,100,0.95)");x.fillStyle=g;x.fillRect(0,0,4,64);return new THREE.CanvasTexture(c)})();
+const shaded=(x,z,w)=>rocks.some(o=>{const rx=x-o.x,rz=z-o.z,t=rx*w.dx+rz*w.dz;return t>0&&t<26+o.r&&Math.abs(-rx*w.dz+rz*w.dx)<o.r+2.2});
+function killWave(){if(!rw)return;world.remove(rw.g);rw.shadows.forEach(m=>world.remove(m));rw=null;const e=document.getElementById("rwarn");if(e)e.style.display="none"}
+function spawnWave(){
+  const a=rnd(0,6.283),dx=Math.sin(a),dz=Math.cos(a),g=new THREE.Group();g.rotation.y=Math.atan2(dx,dz);
+  const mat=()=>new THREE.MeshBasicMaterial({map:rwTex,color:0xa3e635,transparent:true,opacity:.6,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false});
+  const wall=new THREE.Mesh(new THREE.PlaneGeometry(180,18),mat());wall.position.set(0,9,8);g.add(wall);
+  const band=new THREE.Mesh(new THREE.PlaneGeometry(180,16),mat());band.rotation.x=-PI/2;band.position.y=.2;g.add(band);
+  const s0=-95;g.position.set(dx*s0,0,dz*s0);world.add(g);
+  const shadows=[];rocks.forEach(o=>{const gm=new THREE.PlaneGeometry(2*(o.r+2.2),26);gm.rotateX(-PI/2);
+    const m=new THREE.Mesh(gm,new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+    m.rotation.y=Math.atan2(dx,dz);m.position.set(o.x+dx*(13+o.r),.13,o.z+dz*(13+o.r));world.add(m);shadows.push(m)});
+  rw={g,wall,band,s:s0,dx,dz,hw:8,sp:11+lvl,shadows,snd:0,sh:false};
+  sfx("radwave");toast(lang==="ru"?"☢ РАДИАЦИОННАЯ ВОЛНА":"☢ RADIATION WAVE","#bef264");
+  if(!(radW&1)){radW|=1;comm(T[lang].hq,T[lang].radC,7)}
+}
+function animWave(dt){
+  if(!rw)return;
+  if(state!=="play"){killWave();return}
+  rw.s+=rw.sp*dt;rw.snd-=dt;rw.g.position.set(rw.dx*rw.s,0,rw.dz*rw.s);
+  const p=.5+.5*Math.sin(clock*8);rw.wall.material.opacity=.45+.2*p;rw.band.material.opacity=.4+.15*p;
+  rw.shadows.forEach(m=>m.material.opacity=.14+.06*Math.sin(clock*3));
+  const along=rover.x*rw.dx+rover.z*rw.dz;
+  if(Math.random()<dt*14){const k=along-rw.s,px=rover.x-rw.dx*k,pz=rover.z-rw.dz*k,l=rnd(-18,18);emit(px-rw.dz*l,rnd(.5,6),pz+rw.dx*l,2,0xbef264,4,1)}
+  const w=$("rwarn");
+  if(along>rw.s-rw.hw){const t=Math.max(0,(along-rw.s-rw.hw)/rw.sp);w.style.display="block";$("rwt").textContent="☢ "+(t>0?t.toFixed(1)+(lang==="ru"?" с":" s"):"!");
+    $("rwa").style.transform="rotate("+(-(Math.atan2(-rw.dx,-rw.dz)-rover.h))+"rad)"}else w.style.display="none";
+  if(rw.s>80){killWave();rwT=rnd(34-4*lvl,46-4*lvl)}
+}
+function hudRad(){const p=Math.round(rad);$("rb").style.width=p+"%";$("rb").style.background=p<35?"#84cc16":p<60?"#facc15":"#ef4444";$("rp").textContent=p+"%"}
+function radUpdate(dt){
+  if(state!=="play")return;
+  if(!rw){rwT-=dt;if(rwT<=0)spawnWave()}
+  let wr=0;
+  if(rw){const along=rover.x*rw.dx+rover.z*rw.dz;
+    if(Math.abs(along-rw.s)<rw.hw){
+      if(shaded(rover.x,rover.z,rw)){if(!rw.sh){rw.sh=true;toast(lang==="ru"?"☢ в тени камня: безопасно":"☢ in rock shadow: safe","#7dd3fc")}}
+      else{wr=14;if(rw.snd<=0){rw.snd=2;sfx("radhit")}}}}
+  const fr=flare>0&&flare<6.5&&!rocks.some(o=>Math.hypot(rover.x-o.x,rover.z-o.z)<o.r+4.2)?5:0;
+  const onPad=Math.hypot(rover.x-PAD.x,rover.z-PAD.z)<7.5;
+  radI=Math.min(1,Math.max(wr/14,fr/6));
+  if(onPad)rad=Math.max(0,rad-14*dt);else if(wr+fr>0)rad=Math.min(100,rad+(wr+fr)*radRes()*dt);else rad=Math.max(0,rad-.5*dt);
+  if(rad<30)radW&=~2;
+  if(rad>=60&&!(radW&2)){radW|=2;comm(T[lang].hq,T[lang].radH,6);sfx("radwarn")}
+  radLv=Math.max(0,(rad-50)/50);
+  if(radLv>0)battery=Math.max(0,battery-radLv*1.4*dt);
+  hudRad();
+  $("radfx").style.opacity=Math.min(.95,Math.max(rad/100*.75,radI*.35))*(radI>.2?.85+.15*Math.random():1);
+  if(radLv>.3&&Math.random()<dt*radLv*3)shake=Math.max(shake,.15+.2*radLv);
+  if(rad>=100){rad=100;radDeath=true;state="lost";sfx("lose");hudRad();showOv()}
+}
 function playExtras(dt){
-  evUpdate(dt);shootPlay(dt);updAliens(dt);aT-=dt;if(aT<=0&&aliens.length<6+lvl){aT=Math.max(5,10-lvl*1.5);spawnAliens(1)}
+  evUpdate(dt);radUpdate(dt);shootPlay(dt);updAliens(dt);aT-=dt;if(aT<=0&&aliens.length<6+lvl){aT=Math.max(5,10-lvl*1.5);spawnAliens(1)}
   if(comboT>0){comboT-=dt;if(comboT<=0)combo=0}
   scanT=Math.max(0,scanT-dt);scanCd=Math.max(0,scanCd-dt);const cdMax=Math.max(4,11-2*up.radar);
   if(down("KeyE")&&scanCd<=0){scanT=2.6;scanCd=cdMax;sfx("scan");sonar.visible=true;sonar.userData.r=1}
@@ -410,7 +471,7 @@ function playExtras(dt){
       if(d<18){b.x+=dx/d*10*dt;b.z+=dz/d*10*dt}else{b.x+=Math.sin(clock*.7+b.p)*2*dt;b.z+=Math.cos(clock*.6+b.p)*2*dt}
       const rr=Math.hypot(b.x,b.z);if(rr>52){b.x*=52/rr;b.z*=52/rr}b.g.position.x=b.x;b.g.position.z=b.z}
     if(Math.hypot(rover.x-b.x,rover.z-b.z)<3.4){
-      if(b.kind==="gold"){bank+=5;toast("+5 ★","#fde047")}else if(b.kind==="cell"){battery=Math.min(100,battery+45);bank+=1;toast("+45% ⚡","#86efac")}else{bank+=3;toast("+3 ✦","#c4b5fd")}
+      if(b.kind==="gold"){bank+=5;toast("+5 ★","#fde047")}else if(b.kind==="cell"){battery=Math.min(100,battery+45);rad=Math.max(0,rad-25);bank+=1;toast("+45% ⚡  −25 ☢","#86efac")}else{bank+=3;toast("+3 ✦","#c4b5fd")}
       save();sfx("bonus");emit(b.x,1.5,b.z,50,b.hex,12,1.3);world.remove(b.g);bonus.splice(i,1);hudTotal()}}
   if(lvl>=2){mT-=dt;if(mT<=0){mT=Math.max(6,15-3*lvl)+rnd(0,3);
     let x=rover.x+Math.sin(rover.h)*rnd(6,16)+rnd(-8,8),z=rover.z+Math.cos(rover.h)*rnd(6,16)+rnd(-8,8);const rr=Math.hypot(x,z);if(rr>54){x*=54/rr;z*=54/rr}
@@ -522,7 +583,7 @@ function bossUpdate(dt){
 function updateRover(dt){
   rv.root.position.set(rover.x,.05+Math.sin(clock*9)*.03*Math.min(1,Math.abs(rover.v)/8),rover.z);rv.root.rotation.y=rover.h;
   rv.wheels.forEach(w=>w.rotation.x+=rover.v*dt*2);
-  const bm2=state.startsWith("boss"),dm=Math.max(0,bm2?(.6-hull/hullMax())/.6:(55-battery)/55),mv=Math.min(1,Math.abs(rover.v)/8);
+  const bm2=state.startsWith("boss"),dm=Math.max(radLv*.85,Math.max(0,bm2?(.6-hull/hullMax())/.6:(55-battery)/55)),mv=Math.min(1,Math.abs(rover.v)/8);
   rv.root.rotation.z=dm*(.05+Math.sin(clock*15)*.02*(.3+mv));rv.root.rotation.x=Math.sin(clock*11)*.018*dm;
   rv.wheels.forEach((w,i)=>w.rotation.z=Math.sin(clock*13+i*1.7)*.14*dm);
   rv.pans.forEach((p,i)=>{p.rotation.z=p.userData.q*(.45+Math.min(1.1,dm*(i?1.5:1.1))+Math.sin(clock*9+i*2)*.12*dm)});
@@ -733,8 +794,8 @@ function finUpdate(dt){
   paint(bScene,camB);
 }
 // ---- overlay / flow ----
-function showOv(extra){$("flare").style.opacity=0;
-  const M2={start:["sT","sD","sH"],next:["nT","nD","nH"],lost:["lT","lD","lH"],won:["wT","wD","wH"],bossWon:["bwT","bwD","bwH"],bossLost:["blT","blD","blH"]}[state],ov=$("ov");
+function showOv(extra){$("flare").style.opacity=0;$("radfx").style.opacity=0;
+  const M2={start:["sT","sD","sH"],next:["nT","nD","nH"],lost:radDeath?["rT","rD","lH"]:["lT","lD","lH"],won:["wT","wD","wH"],bossWon:["bwT","bwD","bwH"],bossLost:["blT","blD","blH"]}[state],ov=$("ov");
   if(!M2){ov.style.display="none";return}
   ov.style.display="flex";$("ot").textContent=tr(M2[0],state==="next"?lvl:undefined);$("od").textContent=tr(M2[1],state==="won"?total:state==="next"?(extra!==undefined?extra:up.drill*2):undefined);$("oh").textContent=tr(M2[2]);if(state==="next")$("od").textContent+=" "+T[lang].secF[lvl-1];if(state==="bossWon"&&sumUp()<18)$("od").textContent+=" "+tr("finHint");{const a=$("ot").textContent,b=$("od").textContent;typeTo($("ot"),a,40);clearTimeout(window._ot);window._ot=setTimeout(()=>typeTo($("od"),b,75),Math.min(900,a.length*25))}
   $("ot").style.color=/lost|Lost/.test(state)?"#f87171":state==="start"?"#60a5fa":"#4ade80";
